@@ -1,0 +1,5 @@
+.env
+/node_modules
+temp.html
+temp2.html
+/config/firebaseServiceAccount.json

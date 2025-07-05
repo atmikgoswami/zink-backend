@@ -4,7 +4,6 @@ function UserController(database, logger) {
 
   const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
-  const jwt = require("jsonwebtoken");
   const admin = require("../services/firebase");
 
   const emailUtil = require("../utils/emailUtil");
@@ -82,16 +81,13 @@ function UserController(database, logger) {
       .json(new ApiResponse(200, { email }, "Email Address verified"));
   });
 
-  this.generateAccessAndRefreshToken = async (id) => {
+  this.generateAccessToken = async (id) => {
     try {
       const user = await this.database.getUserById(id);
       const accessToken = await user.generateAccessToken();
-      const refreshToken = await user.generateRefreshToken();
-
-      user.refreshToken = refreshToken;
       await user.save({ validateBeforeSave: false });
 
-      return { accessToken, refreshToken };
+      return { accessToken };
     } catch (error) {
       throw new ApiError(
         500,
@@ -177,25 +173,24 @@ function UserController(database, logger) {
     await redis.del(`verified:email:${email}`);
     await redis.del(`verified:phone:${phone}`);
 
-    const { accessToken, refreshToken } =
-      await this.generateAccessAndRefreshToken(user._id);
+    const { accessToken } = await this.generateAccessToken(user._id);
 
     return res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          { user, accessToken, refreshToken },
+          { user, accessToken },
           "User registration (or login) successful"
         )
       );
   });
 
   this.logoutUser = asyncHandler(async (req, res) => {
-    const user = await this.database.clearUserRefreshTokenById(req.user._id);
+    const user = req.user;
 
     if (!user) {
-      throw new ApiError(400, "Failed to update user refreshToken");
+      throw new ApiError(400, "Failed to logout user");
     }
 
     const options = {
@@ -206,66 +201,23 @@ function UserController(database, logger) {
     return res
       .status(200)
       .clearCookie("accessToken", options)
-      .clearCookie("refreshToken", options)
       .json(new ApiResponse(200, {}, "User logged out successfully"));
   });
 
-  this.refreshAccessToken = asyncHandler(async (req, res) => {
-    const incomingRefreshToken =
-      req.cookies.refreshToken || req.body.refreshToken;
+  this.getUserById = asyncHandler(async (req, res) => {
+    const {id} = req.body;
 
-    if (!incomingRefreshToken) {
-      throw new ApiError(401, "Unauthorized request - refresh token required");
+    const user = await this.database.getUserById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
     }
 
-    try {
-      const decodedToken = jwt.verify(
-        incomingRefreshToken,
-        process.env.REFRESH_TOKEN_SECRET
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, { user }, "User details retrieved successfully")
       );
-
-      if (!decodedToken) {
-        throw new ApiError(401, "Invalid refresh token");
-      }
-
-      const user = await this.database.getUserById(decodedToken._id);
-
-      if (!user) {
-        throw new ApiError(401, "User does not exist");
-      }
-
-      console.log("db:", user.refreshToken);
-      console.log("incoming", incomingRefreshToken);
-
-      if (incomingRefreshToken !== user.refreshToken) {
-        throw new ApiError(401, "Invalid refresh token");
-      }
-
-      const { accessToken, refreshToken } =
-        await this.generateAccessAndRefreshToken(user._id);
-
-      const options = {
-        httpOnly: true,
-        secure: true,
-      };
-
-      res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
-        .json(
-          new ApiResponse(
-            200,
-            {
-              accessToken,
-              refreshToken,
-            },
-            "new tokens generated successfully"
-          )
-        );
-    } catch (error) {
-      throw new ApiError(401, error?.message || "Invalid refresh token");
-    }
   });
 }
 

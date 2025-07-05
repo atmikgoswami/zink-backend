@@ -50,7 +50,6 @@ function UserDatabase(dbConnectionString) {
       let savedUser = await newUser.save();
       savedUser = savedUser.toObject();
 
-      delete savedUser.refreshToken;
 
       return savedUser;
     } catch (error) {
@@ -92,24 +91,6 @@ function UserDatabase(dbConnectionString) {
         return user;
       });
     }
-  };
-
-  this.clearUserRefreshTokenById = async (id) => {
-    if (!id) {
-      throw "id cannot be null or undefined";
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      { $set: { refreshToken: null } },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      throw "User not found or refreshToken update failed";
-    }
-
-    return updatedUser;
   };
 
   this.getUsers = () => {

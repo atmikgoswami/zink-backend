@@ -38,10 +38,6 @@ const userSchema = new Schema(
     },
     emailVerified: { type: Boolean, default: false },
     phoneVerified: { type: Boolean, default: false },
-    refreshToken: {
-      type: String,
-      default: null,
-    },
   },
   {
     timestamps: true,
@@ -58,21 +54,6 @@ userSchema.methods.generateAccessToken = async function () {
       picture: this.picture,
     },
     process.env.ACCESS_TOKEN_SECRET,
-    {
-      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-    }
-  );
-};
-
-userSchema.methods.generateRefreshToken = async function () {
-  return jwt.sign(
-    {
-      _id: this._id,
-    },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-    }
   );
 };
 

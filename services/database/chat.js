@@ -43,9 +43,16 @@ function ChatDatabase() {
     if (!userId) throw "userId is required";
 
     try {
-      return await Chat.find({ members: userId })
-        .populate("lastMessage")
-        .sort({ updatedAt: -1 });
+      const chats = await Chat.find({ members: userId })
+        .populate("lastMessage", "content timestamp") // only these fields
+        .sort({ updatedAt: -1 })
+        .lean(); // get plain JS objects
+
+      return chats.map((chat) => ({
+        ...chat,
+        lastMessage: chat.lastMessage?.content || null,
+        lastMessageTimestamp: chat.lastMessage?.timestamp || null,
+      }));
     } catch (err) {
       logger.error("Error fetching user chats: " + err);
       throw err;

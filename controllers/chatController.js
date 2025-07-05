@@ -25,6 +25,9 @@ function ChatController(chatDb, messageDb, logger) {
 
     if (!chatId) throw new ApiError(400, "chatId is required");
 
+    const chat = await this.chatDb.getChatById(chatId);
+    if (!chat) throw new ApiError(404, "Chat not found");
+
     const messages = await this.messageDb.getMessagesByChatId(
       chatId,
       req.user._id,
@@ -32,11 +35,16 @@ function ChatController(chatDb, messageDb, logger) {
       limit
     );
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, { messages }, "Messages fetched successfully")
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          messages,
+          chat,
+        },
+        "Messages fetched successfully"
+      )
+    );
   });
 
   this.sendMessage = asyncHandler(async (req, res) => {

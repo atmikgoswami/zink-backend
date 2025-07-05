@@ -3,6 +3,22 @@ const {
   messageDatabase: messageDb,
 } = require("../../database");
 
+const transformMessage = (msg) => ({
+  id: msg._id?.toString(),                     // ✅ required
+  from: msg.from?.toString(),
+  to: msg.to?.toString() ?? null,
+  chatId: msg.chatId?.toString(),
+  content: msg.content,
+  messageType: msg.messageType,
+  mediaUrl: msg.mediaUrl ?? null,
+  caption: msg.caption ?? null,
+  edited: msg.edited ?? false,
+  readAt: msg.readAt ?? null,
+  readBy: msg.readBy ?? [],
+  timestamp: new Date(msg.timestamp).getTime(), // ✅ convert to number
+});
+
+
 module.exports = (socket, io) => {
   socket.on("message:send", async (data) => {
     const { from, to, chatId, content, messageType, mediaUrl, caption } = data;
@@ -28,19 +44,13 @@ module.exports = (socket, io) => {
 
       await chatDb.updateChatOnMessage(chat._id, message._id);
 
-      // Ensure timestamp is a number
-      const formattedMessage = {
-        ...message.toObject?.() ?? message, // handle Mongoose document
-        timestamp: new Date(message.createdAt).getTime(), // or message.timestamp
-      };
-
       // Broadcast to group members
       chat.members.forEach((memberId) => {
         const recipientSocket = global.onlineUsers[memberId.toString()];
         if (recipientSocket && memberId.toString() !== from) {
           io.to(recipientSocket).emit("message:receive", {
             chatId: chat._id,
-            message: formattedMessage,
+            message: transformMessage(message),
           });
         }
       });
@@ -48,7 +58,7 @@ module.exports = (socket, io) => {
       // Acknowledge sender
       socket.emit("message:sent", {
         chatId: chat._id,
-        message: formattedMessage,
+        message: transformMessage(message),
       });
     } catch (err) {
       console.error("Error in message:send:", err);

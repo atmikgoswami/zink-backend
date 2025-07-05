@@ -12,10 +12,12 @@ const frontUri = `${process.env.FRONT_HOST}`;
 
 //app.use(cors({ origin: frontUri, credentials: true }));
 
-app.use(cors({
-  origin: (origin, callback) => callback(null, true),
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => callback(null, true),
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -27,6 +29,13 @@ app.use(
     tempFileDir: "/tmp/",
   })
 );
+
+app.get("/", (req, res) => {
+  res.status(200).json({
+    message: "Welcome to Zink API",
+    version: "1.0.0",
+  });
+});
 
 app.use("/api/v1", routes);
 

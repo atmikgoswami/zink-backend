@@ -25,7 +25,7 @@ database
     const backUri = `${process.env.BACK_HOST}`;
     const PORT = process.env.BACK_PORT;
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       logger.info(`Server running on ${backUri}`);
     });
   })

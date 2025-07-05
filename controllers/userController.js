@@ -152,27 +152,26 @@ function UserController(database, logger) {
       );
     }
 
-    const existingUser = await this.database.getUserByEmail(email);
-    if (existingUser) {
-      throw new ApiError(400, "User already exists");
-    }
-
-    const newUserData = {
-      email,
-      phone,
-      fullname: name,
-      emailVerified: true,
-      phoneVerified: true,
-    };
-
-    if (picture) {
-      newUserData.picture = picture;
-    }
-
-    const user = await this.database.createUser(newUserData);
+    let user = await this.database.getUserByEmail(email);
 
     if (!user) {
-      throw new ApiError(500, "User registration failed");
+      const newUserData = {
+        email,
+        phone,
+        fullname: name,
+        emailVerified: true,
+        phoneVerified: true,
+      };
+
+      if (picture) {
+        newUserData.picture = picture;
+      }
+
+      user = await this.database.createUser(newUserData);
+
+      if (!user) {
+        throw new ApiError(500, "User registration failed");
+      }
     }
 
     await redis.del(`verified:email:${email}`);
@@ -182,12 +181,12 @@ function UserController(database, logger) {
       await this.generateAccessAndRefreshToken(user._id);
 
     return res
-      .status(201)
+      .status(200)
       .json(
         new ApiResponse(
-          201,
+          200,
           { user, accessToken, refreshToken },
-          "User registered successfully"
+          "User registration (or login) successful"
         )
       );
   });

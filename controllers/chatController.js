@@ -9,11 +9,13 @@ function ChatController(chatDb, messageDb, logger) {
   this.getUserChats = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
-    const chats = await this.chatDb.getUserChats(userId);
+    const { chats, users } = await this.chatDb.getUserChats(userId);
 
     return res
       .status(200)
-      .json(new ApiResponse(200, { chats }, "Chats fetched successfully"));
+      .json(
+        new ApiResponse(200, { chats, users }, "Chats fetched successfully")
+      );
   });
 
   // Get messages in a chat (paginated)

@@ -1,6 +1,7 @@
 function ChatDatabase() {
   const logger = require("../log");
   const Chat = require("../../models/chat");
+  const User = require("../../models/user");
 
   this.getOrCreateChat = async (user1, user2) => {
     if (!user1 || !user2) throw "Both users must be specified";
@@ -44,15 +45,38 @@ function ChatDatabase() {
 
     try {
       const chats = await Chat.find({ members: userId })
-        .populate("lastMessage", "content timestamp") // only these fields
+        .populate("lastMessage", "content timestamp")
         .sort({ updatedAt: -1 })
-        .lean(); // get plain JS objects
+        .lean();
 
-      return chats.map((chat) => ({
-        ...chat,
-        lastMessage: chat.lastMessage?.content || null,
-        lastMessageTimestamp: chat.lastMessage?.timestamp || null,
-      }));
+      const allUserIdsSet = new Set();
+
+      const formattedChats = chats.map((chat) => {
+        chat.members.forEach((id) => allUserIdsSet.add(id.toString()));
+        chat.admins.forEach((id) => allUserIdsSet.add(id.toString()));
+
+        return {
+          id: chat._id.toString(),
+          members: chat.members.map((m) => m.toString()),
+          chatType: chat.chatType,
+          name: chat.name || null,
+          avatar: chat.avatar || null,
+          admins: chat.admins.map((a) => a.toString()),
+          lastMessage: chat.lastMessage?.content || null,
+          lastMessageTime: chat.lastMessage?.timestamp
+            ? new Date(chat.lastMessage.timestamp).getTime()
+            : null,
+        };
+      });
+
+      const userIds = Array.from(allUserIdsSet);
+
+      const users = await User.find({ _id: { $in: userIds } }).lean();
+
+      return {
+        chats: formattedChats,
+        users,
+      };
     } catch (err) {
       logger.error("Error fetching user chats: " + err);
       throw err;

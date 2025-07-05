@@ -44,7 +44,9 @@ function MessageDatabase() {
   this.getMessagesByChatId = async (chatId, userId, page = 1, limit = 20) => {
     if (!chatId || !userId) throw "chatId and userId are required";
 
-    const skip = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.max(1, parseInt(limit));
+    const skip = (pageNum - 1) * limitNum;
 
     try {
       const messages = await Message.find({

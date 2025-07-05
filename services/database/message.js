@@ -58,17 +58,24 @@ function MessageDatabase() {
         .limit(limitNum)
         .lean(); // important: returns plain JS objects, not Mongoose docs
 
-      // Cast timestamp string to number
       const converted = messages.map((msg) => ({
-        ...msg,
-        timestamp: Number(msg.timestamp), // ✅ force numeric
+        id: msg._id.toString(), // ✅ Rename _id to id
+        from: msg.from,
+        to: msg.to,
+        chatId: msg.chatId,
+        messageType: msg.messageType,
+        content: msg.content,
+        mediaUrl: msg.mediaUrl,
+        caption: msg.caption,
+        edited: msg.edited,
         readAt: msg.readAt ? Number(msg.readAt) : undefined,
         readBy: Array.isArray(msg.readBy)
           ? msg.readBy.map((rb) => ({
-              ...rb,
-              readAt: rb.readAt ? Number(rb.readAt) : undefined,
+              user: rb.user,
+              at: rb.at ? Number(rb.at) : undefined,
             }))
           : [],
+        timestamp: Number(msg.timestamp), // ✅ ensure timestamp is number
       }));
 
       return converted;

@@ -28,13 +28,19 @@ module.exports = (socket, io) => {
 
       await chatDb.updateChatOnMessage(chat._id, message._id);
 
+      // Ensure timestamp is a number
+      const formattedMessage = {
+        ...message.toObject?.() ?? message, // handle Mongoose document
+        timestamp: new Date(message.createdAt).getTime(), // or message.timestamp
+      };
+
       // Broadcast to group members
       chat.members.forEach((memberId) => {
         const recipientSocket = global.onlineUsers[memberId.toString()];
         if (recipientSocket && memberId.toString() !== from) {
           io.to(recipientSocket).emit("message:receive", {
             chatId: chat._id,
-            message,
+            message: formattedMessage,
           });
         }
       });
@@ -42,7 +48,7 @@ module.exports = (socket, io) => {
       // Acknowledge sender
       socket.emit("message:sent", {
         chatId: chat._id,
-        message,
+        message: formattedMessage,
       });
     } catch (err) {
       console.error("Error in message:send:", err);

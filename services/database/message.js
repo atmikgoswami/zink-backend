@@ -55,9 +55,23 @@ function MessageDatabase() {
       })
         .sort({ timestamp: -1 })
         .skip(skip)
-        .limit(parseInt(limit));
+        .limit(limitNum)
+        .lean(); // important: returns plain JS objects, not Mongoose docs
 
-      return messages;
+      // Cast timestamp string to number
+      const converted = messages.map((msg) => ({
+        ...msg,
+        timestamp: Number(msg.timestamp), // ✅ force numeric
+        readAt: msg.readAt ? Number(msg.readAt) : undefined,
+        readBy: Array.isArray(msg.readBy)
+          ? msg.readBy.map((rb) => ({
+              ...rb,
+              readAt: rb.readAt ? Number(rb.readAt) : undefined,
+            }))
+          : [],
+      }));
+
+      return converted;
     } catch (err) {
       logger.error("Error fetching messages:", err);
       throw err;
